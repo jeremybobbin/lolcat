@@ -14,9 +14,6 @@ use std::{
 
 
 fn main() {
-    let mut stdin  = io::stdin();
-    let mut stdout = io::stdout();
-
     let ym = var("X").ok()
         .and_then(|a| a.parse().ok())
         .unwrap_or(0.2);
@@ -25,7 +22,7 @@ fn main() {
         .and_then(|a| a.parse().ok())
         .unwrap_or(0.2);
 
-    lolcat(stdin, stdout.lock(), (xm, ym))
+    lolcat(io::stdin(), io::stdout(), (xm, ym))
         .unwrap();
 }
 
@@ -35,24 +32,39 @@ fn lolcat<R: Read, W: Write>(reader: R, writer: W, multipliers: (f64, f64)) -> i
     let (xm, ym) = multipliers;
 
     let mut reader = BufReader::new(reader);
-    let mut writer = BufWriter::new(writer);
+    let mut writer = LineWriter::new(writer);
 
-    let lines = reader.lines()
-        .filter_map(Result::ok)
-        .enumerate();
+    let mut y = 0;
+    let mut buf = String::new();
 
-    for (y, line) in lines {
-        let y = y as f64 * ym;
-        for (x, c) in line.chars().enumerate() {
-            let i = y + (x as f64 * xm);
+    while let Ok(res) = reader.read_line(&mut buf) {
+        if res == 0 {
+            break;
+        }
+
+        if buf.ends_with('\n') {
+            buf.pop();
+            if buf.ends_with('\r') {
+                buf.pop();
+            }
+        }
+
+        for (x, c) in buf.chars().enumerate() {
+            if !c.is_ascii() {
+                continue;
+            }
+            let i = (y as f64 * ym) + (x as f64 * xm);
 
             let r = (((i                    ).sin() * 127.) + 128.) as u8;
             let g = (((i + ((2. * PI) / 3.) ).sin() * 127.) + 128.) as u8;
             let b = (((i + ((4. * PI) / 3.) ).sin() * 127.) + 128.) as u8;
-            write!(&mut writer, "\x1B[38;2;{};{};{}m{}", r, g, b, c);
+
+            write!(&mut writer, "\x1B[38;2;{};{};{}m{}", r, g, b, c)?;
         }
-        write!(&mut writer, "\n");
+        write!(&mut writer, "\n")?;
+        
+        y += 1;
+        buf.clear();
     }
-    writer.flush()?;
     Ok(())
 }
