@@ -2,7 +2,6 @@ use std::{
     io::{
         self,
         BufReader,
-        BufWriter,
         Read,
         Write,
         BufRead,
@@ -22,8 +21,7 @@ fn main() {
         .and_then(|a| a.parse().ok())
         .unwrap_or(0.2);
 
-    lolcat(io::stdin(), io::stdout(), (xm, ym))
-        .unwrap();
+    lolcat(io::stdin(), io::stdout(), (xm, ym));
 }
 
 
